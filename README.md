@@ -1,0 +1,1 @@
+Implementação do jogo [The Resistence](https://www.fclar.unesp.br/Home/Biblioteca/jogos-the-resistance-manual.pdf) na [BitDogLab](https://github.com/BitDogLab/BitDogLab) como projeto da matéria de Laboratório de Sistemas Embarcados EA076. 
