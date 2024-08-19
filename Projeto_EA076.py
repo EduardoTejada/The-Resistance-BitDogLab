@@ -1,11 +1,15 @@
-from machine import Pin, SoftI2C, ADC
+from machine import Pin, SoftI2C, ADC, PWM
 from ssd1306 import SSD1306_I2C
 import utime, time, random, neopixel
 
+it=40# ontensidade do LED, pode variar de 1 a 255
 
 # Configuração dos botões
 button_a = Pin(5, Pin.IN, Pin.PULL_UP)
 button_b = Pin(6, Pin.IN, Pin.PULL_UP)
+
+# Configuração do buzzer
+buzzer = PWM(Pin(21))  # Buzzer conectado ao GPIO21
 
 # Configuração do LED RGB
 red_led = Pin(12, Pin.OUT)
@@ -28,8 +32,6 @@ vrx = ADC(Pin(27))  # Conectado ao eixo X do joystick
 CENTRAL_X = 32768
 
 np = neopixel.NeoPixel(machine.Pin(7), 25)
-
-it=5# ontensidade do LED, pode variar de 1 a 255
 
 # definir cores para os LEDs
 BLU = (0, 0, 1*it)# BLUE
@@ -78,11 +80,8 @@ matriz_resultado = []
 
 # Variáveis globais
 numero_de_jogadores = 5
-contador = 0 # apagar dps
 estado_botao_a = 0
-flag_botao_a = 0
 estado_botao_b = 0
-flag_botao_b = 0
 missao_hover = 0
 cargo = ["Assassino", "Comandante Falso", "Guarda Costas", "Comandante", "Resistencia", "Resistencia", "Agente Oculto", "Resistencia", "Resistencia", "Espiao", ""]
 jogadores_missao = [3, 4, 4, 5, 5]
@@ -92,6 +91,7 @@ missao_escolhida = None
 votos_nao = [0, 0, 0, 0, 0]
 num = 0
 voto_atual = None
+time_vencedor = None
 
 
 #Variável de estado
@@ -156,11 +156,7 @@ def mostrarMatriz(desenho):
 mostrarMatriz(heart)
 
 def atualizaOled(numero_i = 0):
-    global contador
-    global numero_de_jogadores
-    global estado
-    global cargo
-    global mapa
+    global numero_de_jogadores, estado, cargo, mapa, time_vencedor
     
     oled.fill(0)  # Limpar display
     
@@ -217,8 +213,9 @@ def atualizaOled(numero_i = 0):
         oled.text("Aperte B para", 0, 0)
         oled.text("revelar o", 0, 10)
         oled.text("resultado", 0, 20)
-        
-        
+    elif estado == 9:
+        oled.text("Time vencedor:", 0, 0)
+        oled.text(str(time_vencedor), 0, 10)
     oled.show()
 
 
@@ -421,7 +418,7 @@ def confirmarVoto():
 
 
 def mostrarVotos():
-    global estado, estado_botao_a, estado_botao_b, votos_nao, jogadores_missao, falhas_missao, missao_escolhida, missao
+    global estado, estado_botao_a, estado_botao_b, votos_nao, jogadores_missao, falhas_missao, missao_escolhida, missao, time_vencedor
     
     atualizaOled()
     
@@ -436,6 +433,7 @@ def mostrarVotos():
             if missao.count(-1) >= 3:
                 animacaoEspioes()
                 estado = 9
+                time_vencedor = "ESPIOES"
             else:
                 animacaoVotoNao()
         else:
@@ -444,12 +442,14 @@ def mostrarVotos():
             if missao.count(1) >= 3:
                 animacaoResistencia()
                 estado = 9
+                time_vencedor = "RESISTENCIA"
             else:
                 animacaoVotoSim()
-        if missao.count(0) == 0:
-            missao[4] = 0
+        atualizaOled()
         if estado != 9:
             estado = 4
+        if missao.count(0) == 0:
+            missao[4] = 0
     
     elif button_b.value() == 1 and estado_botao_b == 1:
         estado_botao_b = 0
@@ -489,12 +489,11 @@ def animacaoVotoNao():
         [RED, BLA, BLA, BLA, RED]
         ]
     mostrarMatriz(nao)
-    #tocar uma musiquinha
+    som_derrota_classico()
     time.sleep(1)
     mostrarMatriz(matriz_resultado)
     time.sleep(1)
     mostrarMatriz(nao)
-    #tocar uma musiquinha
     time.sleep(1)
     mostrarMatriz(matriz_resultado)
     time.sleep(1)
@@ -511,12 +510,11 @@ def animacaoVotoSim():
         [BLA, BLA, BLA, BLA, BLA]
         ]
     mostrarMatriz(sim)
-    #tocar uma musiquinha
+    som_vitoria()
     time.sleep(1)
     mostrarMatriz(matriz_resultado)
     time.sleep(1)
     mostrarMatriz(sim)
-    #tocar uma musiquinha
     time.sleep(1)
     mostrarMatriz(matriz_resultado)
     time.sleep(1)
@@ -531,6 +529,7 @@ def animacaoEspioes():
         [RED, RED, RED, RED, RED],
         [RED, RED, RED, RED, RED]
         ])
+    reiniciarJogo()
 
 def animacaoResistencia():
     mostrarMatriz([
@@ -540,6 +539,71 @@ def animacaoResistencia():
         [BLU, BLU, BLU, BLU, BLU],
         [BLU, BLU, BLU, BLU, BLU]
         ])
+    reiniciarJogo()
+
+
+def som_derrota_classico():
+    # Sequência de notas descendentes
+    notas = [523, 466, 392, 349]  # C5, A#4, G4, F4
+    duracoes = [0.2, 0.2, 0.2, 0.6]  # Duracoes respectivas das notas
+    
+    for i in range(4):
+        buzzer.freq(notas[i])  # Define a frequência da nota
+        buzzer.duty_u16(32768)  # 50% duty cycle
+        time.sleep(duracoes[i])  # Duração da nota
+        buzzer.duty_u16(0)  # Pausa entre as notas
+        time.sleep(0.05)
+        
+        
+def som_vitoria():
+    # Sequência de notas com um padrão alegre
+    buzzer.freq(523)  # Nota C5 (523 Hz)
+    buzzer.duty_u16(32768)  # 50% duty cycle
+    time.sleep(0.15)  # Duração da nota
+    buzzer.duty_u16(0)  # Pausa entre as notas
+    time.sleep(0.05)
+
+    buzzer.freq(659)  # Nota E5 (659 Hz)
+    buzzer.duty_u16(32768)
+    time.sleep(0.15)
+    buzzer.duty_u16(0)
+    time.sleep(0.05)
+
+    buzzer.freq(784)  # Nota G5 (784 Hz)
+    buzzer.duty_u16(32768)
+    time.sleep(0.15)
+    buzzer.duty_u16(0)
+    time.sleep(0.05)
+
+    buzzer.freq(1046)  # Nota C6 (1046 Hz) - uma oitava acima
+    buzzer.duty_u16(32768)
+    time.sleep(0.3)
+    buzzer.duty_u16(0)
+
+
+def reiniciarJogo():
+    global estado, missao_hover, cargo, jogadores_missao, falhas_missao, missao, missao_escolhida, votos_nao, num, voto_atual, time_vencedor, heart, mapa
+    
+    mostrarMatriz(heart)
+    estado = 0
+    missao_hover = 0
+    cargo = ["Assassino", "Comandante Falso", "Guarda Costas", "Comandante", "Resistencia", "Resistencia", "Agente Oculto", "Resistencia", "Resistencia", "Espiao", ""]
+    jogadores_missao = [3, 4, 4, 5, 5]
+    falhas_missao = [1, 1, 1, 2, 1]
+    missao = [0, 0, 0, 0, None]
+    missao_escolhida = None
+    votos_nao = [0, 0, 0, 0, 0]
+    num = 0
+    voto_atual = None
+    time_vencedor = None
+    mapa = [
+        [WHI, WHI, WHI, WHI, WHI],
+        [YEL, BLA, BLA, BLA, BLA],
+        [BLA, BLA, BLA, BLA, BLA],
+        [BLA, BLA, BLA, BLA, BLA],
+        [BLA, BLA, BLA, BLA, BLA]
+    ]
+
 
 def main():
     while True:
@@ -559,6 +623,8 @@ def main():
             confirmarVoto()
         elif estado == 8:
             mostrarVotos()
+        elif estado == 9:
+            reiniciarJogo()
 
 # Executar a função principal
 main()
