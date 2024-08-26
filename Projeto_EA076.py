@@ -2,6 +2,8 @@ from machine import Pin, SoftI2C, ADC, PWM
 from ssd1306 import SSD1306_I2C
 import utime, time, random, neopixel
 
+debug = False
+
 it=40# ontensidade do LED, pode variar de 1 a 255
 
 # Configuração dos botões
@@ -155,7 +157,7 @@ def mostrarMatriz(desenho):
 
 mostrarMatriz(heart)
 
-def atualizaOled(numero_i = 0):
+def atualizaOled(numero_i = 0, tempo = 0):
     global numero_de_jogadores, estado, cargo, mapa, time_vencedor
     
     oled.fill(0)  # Limpar display
@@ -170,16 +172,20 @@ def atualizaOled(numero_i = 0):
         oled.text("Jogadores: "+ str(numero_de_jogadores), 0, 30)
     elif estado == 2:
         oled.text("Jogador "+str(numero_i+1), 0, 0)
-        oled.text("B para revelar", 0, 10)
+        if tempo > 0:
+            oled.text("Aguarde: "+str(tempo), 0, 30)
+        else:
+            oled.text("B para revelar", 0, 30)
     elif estado == 3:
         oled.text("Jogador "+str(numero_i+1), 0, 0)
-        oled.text("Seu cargo e:", 0, 10)
+        oled.text("Cargo:", 0, 10)
         oled.text(str(cargo[numero_i]), 0, 20)
-        oled.text("Time:", 0, 40)
+        #oled.text("Time:", 0, 40)
         if str(cargo[numero_i]) == "Agente Oculto" or str(cargo[numero_i]) == "Comandante Falso" or str(cargo[numero_i]) == "Assassino" or str(cargo[numero_i]) == "Espiao":
-            oled.text("Espioes", 0, 50)
+            oled.text("Time: Espioes", 0, 30)
         else:
-            oled.text("Resistencia", 0, 50)
+            oled.text("Time:Resistencia", 0, 30)
+        oled.text("B para esconder", 0, 50)
     elif estado == 4:
         if numero_i == 4 and (mapa[0][0] == WHI or mapa[0][1] == WHI or mapa[0][2] == WHI or mapa[0][3] == WHI):
             oled.text("Missao "+str(numero_i+1), 0, 0)
@@ -269,33 +275,41 @@ def escolherNumDeJogadores():
 
 
 def esperarParaRevelarCargo():
-    global estado
-    global estado_botao_b
-    global numero_de_jogadores
+    global estado, estado_botao_b, numero_de_jogadores, debug
     
     i = 0
     
     sortearCargos()
     
+    flag_sleep = False
+    
     while i < numero_de_jogadores:
         if estado == 2:
-            atualizaOled(i)
+            if flag_sleep and not debug:
+                for k in range(0, 2):
+                    atualizaOled(i, 2-k)
+                    time.sleep(1)
+                atualizaOled(i, 0)
+                flag_sleep = False
+            else:
+                atualizaOled(i)
             
             # Se o Botão B for pressionado
             if button_b.value() == 0 and estado_botao_b == 0:
                 estado_botao_b = 1
                 estado = 3
+                #flag_sleep = True
             elif button_b.value() == 1 and estado_botao_b == 1:
                 estado_botao_b = 0
 
         elif estado == 3:
             atualizaOled(i)
-
             # Se o Botão B for pressionado
             if button_b.value() == 0 and estado_botao_b == 0:
                 estado_botao_b = 1
                 estado = 2
                 i += 1
+                flag_sleep = True
             elif button_b.value() == 1 and estado_botao_b == 1:
                 estado_botao_b = 0
     
@@ -455,7 +469,7 @@ def mostrarVotos():
         estado_botao_b = 0
 
 def animacaoMostraVotos():
-    global estado, estado_botao_a, estado_botao_b, votos_nao, jogadores_missao, falhas_missao, missao_escolhida, missao, matriz_resultado
+    global estado, estado_botao_a, estado_botao_b, votos_nao, jogadores_missao, falhas_missao, missao_escolhida, missao, matriz_resultado, debug
     votos_sim = jogadores_missao[missao_escolhida] - votos_nao[missao_escolhida]
     
     mostrarMatriz(nothing)
@@ -477,10 +491,11 @@ def animacaoMostraVotos():
         matriz_resultado[3][i] = cor
         matriz_resultado[4][i] = cor
         mostrarMatriz(matriz_resultado)
-        time.sleep(2)
+        if not debug:
+            time.sleep(2)
 
 def animacaoVotoNao():
-    global matriz_resultado
+    global matriz_resultado, debug
     nao = [
         [RED, BLA, BLA, BLA, RED],
         [BLA, RED, BLA, RED, BLA],
@@ -490,18 +505,19 @@ def animacaoVotoNao():
         ]
     mostrarMatriz(nao)
     som_derrota_classico()
-    time.sleep(1)
-    mostrarMatriz(matriz_resultado)
-    time.sleep(1)
-    mostrarMatriz(nao)
-    time.sleep(1)
-    mostrarMatriz(matriz_resultado)
-    time.sleep(1)
-    mostrarMatriz(nao)
-    time.sleep(1)
+    if not debug:
+        time.sleep(1)
+        mostrarMatriz(matriz_resultado)
+        time.sleep(1)
+        mostrarMatriz(nao)
+        time.sleep(1)
+        mostrarMatriz(matriz_resultado)
+        time.sleep(1)
+        mostrarMatriz(nao)
+        time.sleep(1)
 
 def animacaoVotoSim():
-    global matriz_resultado
+    global matriz_resultado, debug
     sim = [
         [BLA, BLA, BLA, BLA, BLU],
         [BLA, BLA, BLA, BLU, BLA],
@@ -511,34 +527,39 @@ def animacaoVotoSim():
         ]
     mostrarMatriz(sim)
     som_vitoria()
-    time.sleep(1)
-    mostrarMatriz(matriz_resultado)
-    time.sleep(1)
-    mostrarMatriz(sim)
-    time.sleep(1)
-    mostrarMatriz(matriz_resultado)
-    time.sleep(1)
-    mostrarMatriz(sim)
-    time.sleep(1)
+    if not debug:
+        time.sleep(1)
+        mostrarMatriz(matriz_resultado)
+        time.sleep(1)
+        mostrarMatriz(sim)
+        time.sleep(1)
+        mostrarMatriz(matriz_resultado)
+        time.sleep(1)
+        mostrarMatriz(sim)
+        time.sleep(1)
 
 def animacaoEspioes():
     mostrarMatriz([
-        [RED, RED, RED, RED, RED],
-        [RED, RED, RED, RED, RED],
-        [RED, RED, RED, RED, RED],
-        [RED, RED, RED, RED, RED],
-        [RED, RED, RED, RED, RED]
+        [BLA, BLA, BLA, BLA, BLA],
+        [BLA, RED, BLA, RED, BLA],
+        [BLA, BLA, BLA, BLA, BLA],
+        [RED, BLA, BLA, BLA, RED],
+        [BLA, RED, RED, RED, BLA]
         ])
+    som_derrota_classico()
+    time.sleep(3)
     reiniciarJogo()
 
 def animacaoResistencia():
     mostrarMatriz([
-        [BLU, BLU, BLU, BLU, BLU],
-        [BLU, BLU, BLU, BLU, BLU],
-        [BLU, BLU, BLU, BLU, BLU],
-        [BLU, BLU, BLU, BLU, BLU],
-        [BLU, BLU, BLU, BLU, BLU]
+        [BLA, BLU, BLA, BLU, BLA],
+        [BLA, BLU, BLA, BLU, BLA],
+        [BLA, BLA, BLA, BLA, BLA],
+        [BLU, BLA, BLA, BLA, BLU],
+        [BLA, BLU, BLU, BLU, BLA]
         ])
+    som_vitoria()
+    time.sleep(3)
     reiniciarJogo()
 
 
@@ -603,6 +624,7 @@ def reiniciarJogo():
         [BLA, BLA, BLA, BLA, BLA],
         [BLA, BLA, BLA, BLA, BLA]
     ]
+
 
 
 def main():
