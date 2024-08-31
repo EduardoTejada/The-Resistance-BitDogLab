@@ -619,6 +619,7 @@ def som_vitoria():
 def reiniciarJogo():
     global estado, missao_hover, cargo, jogadores_missao, falhas_missao, missao, missao_escolhida, votos_nao, jogador_atual, voto_atual, time_vencedor, heart, mapa
     
+    play_amongus()
     # reinicia todas as variaveis necessárias
     mostrarMatriz(heart)
     estado = 0
@@ -640,6 +641,34 @@ def reiniciarJogo():
         [BLA, BLA, BLA, BLA, BLA]
     ]
 
+
+def play_tone(frequency, duration):
+    if frequency == 0:
+        time.sleep(duration)
+    else:
+        buzzer.freq(frequency)
+        buzzer.duty_u16(32768)  # 50% duty cycle
+        time.sleep(duration)
+        buzzer.duty_u16(0)  # Desliga o som
+        time.sleep(0.05)  # Pausa curta entre as notas
+
+def play_amongus():
+    # Primeira parte da música
+    play_tone(1046, 0.25)  # C6
+    play_tone(1244, 0.25)  # D#6
+    play_tone(1400, 0.25)  # F6 (aproximado)
+    play_tone(1510, 0.25)  # F#6 (aproximado)
+    play_tone(1400, 0.25)  # F6 (aproximado)
+    play_tone(1244, 0.25)  # D#6
+    play_tone(1046, 0.25)  # C6
+    play_tone(0, 0.5)      # Pausa
+    play_tone(932, 0.125)  # A#5
+    play_tone(1174, 0.125) # D#6
+    play_tone(1046, 0.25)  # C6
+    play_tone(0, 0.5)      # Pausa
+    play_tone(780, 0.25)   # G5
+    play_tone(525, 0.25)   # C5 (aproximado)
+    play_tone(0, 0.25)     # Pausa
 
 
 def main():
