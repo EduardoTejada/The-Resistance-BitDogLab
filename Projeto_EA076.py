@@ -2,26 +2,17 @@ from machine import Pin, SoftI2C, ADC, PWM
 from ssd1306 import SSD1306_I2C
 import utime, time, random, neopixel
 
-debug = False
+# Debug, quando True retira os atrasos de animações do código para debug mais rápido
+debug = True
 
-it=40# ontensidade do LED, pode variar de 1 a 255
+it=40 # Intensidade do LED, pode variar de 1 a 255
 
 # Configuração dos botões
 button_a = Pin(5, Pin.IN, Pin.PULL_UP)
 button_b = Pin(6, Pin.IN, Pin.PULL_UP)
 
 # Configuração do buzzer
-buzzer = PWM(Pin(21))  # Buzzer conectado ao GPIO21
-
-# Configuração do LED RGB
-red_led = Pin(12, Pin.OUT)
-green_led = Pin(13, Pin.OUT)
-blue_led = Pin(11, Pin.OUT)
-
-# Desligando o LED RGB inicialmente
-red_led.value(0)
-green_led.value(0)
-blue_led.value(0)
+buzzer = PWM(Pin(21))
 
 # Configuração OLED
 i2c = SoftI2C(scl=Pin(15), sda=Pin(14))
@@ -38,13 +29,14 @@ np = neopixel.NeoPixel(machine.Pin(7), 25)
 # definir cores para os LEDs
 BLU = (0, 0, 1*it)# BLUE
 GRE = (0, 1*it, 0)# GREEN
-RED = (1*it, 0, 0)
+RED = (1*it, 0, 0)#RED
 YEL = (1*it, 1*it, 0)# YELLOW
 MAGE = (1*it, 0, 1*it)# MANGENTA
 CYA = (0, 1*it, 1*it)# CYAN
 WHI = (1*it, 1*it, 1*it)# WHIE
 BLA = (0, 0, 0)# BLACK
 
+# Simbolos padrões no display matricial
 heart = [
     [BLA, RED, BLA, RED, BLA],
     [RED, RED, RED, RED, RED],
@@ -79,7 +71,6 @@ mapa = [
 
 matriz_resultado = []
 
-
 # Variáveis globais
 numero_de_jogadores = 5
 estado_botao_a = 0
@@ -91,7 +82,7 @@ falhas_missao = [1, 1, 1, 2, 1]
 missao = [0, 0, 0, 0, None]
 missao_escolhida = None
 votos_nao = [0, 0, 0, 0, 0]
-num = 0
+jogador_atual = 0
 voto_atual = None
 time_vencedor = None
 
@@ -139,44 +130,48 @@ def lerJoystick():
     
 
 def mostrarMatriz(desenho):
-# definir a matriz 5x5
+    # definir a matriz 5x5
     led_matrix = desenho
 
-# inverter a matriz
+    # inverter a matriz para que seja mostrada exatamente como é escrita
     inverted_matrix = led_matrix[::-1]
     inverted_matrix[0] = inverted_matrix[0][::-1]
     inverted_matrix[2] = inverted_matrix[2][::-1]
     inverted_matrix[4] = inverted_matrix[4][::-1]
 
-# exibir a matriz invertida nos LEDs
+    # exibir a matriz invertida nos LEDs
     for i in range(5):
         for j in range(5):
             np[i*5+j] = inverted_matrix[i][j]
 
     np.write()
 
+#mostrando inicialmente um coração no display matricial
 mostrarMatriz(heart)
 
+
+#função para mostrar no oled
 def atualizaOled(numero_i = 0, tempo = 0):
     global numero_de_jogadores, estado, cargo, mapa, time_vencedor
     
     oled.fill(0)  # Limpar display
     
-    if estado == 0:
+    #conforme o estado será mostrado ao diferente no display
+    if estado == 0: #fase inicial: quantidade de jogadores
         oled.text("Num de jogadores: ", 0, 0)
         oled.text(str(numero_de_jogadores), 0, 10)
         oled.text("Pressione B", 0, 30)
-    elif estado == 1:
+    elif estado == 1: #confirmação da quantidade de jogadores
         oled.text("B para confirmar", 0, 0)
         oled.text("A para voltar", 0, 10)
         oled.text("Jogadores: "+ str(numero_de_jogadores), 0, 30)
-    elif estado == 2:
+    elif estado == 2: # pré revelação de cargo (espera de 2 segundos e confirmação)
         oled.text("Jogador "+str(numero_i+1), 0, 0)
         if tempo > 0:
             oled.text("Aguarde: "+str(tempo), 0, 30)
         else:
             oled.text("B para revelar", 0, 30)
-    elif estado == 3:
+    elif estado == 3: # revelação de cargo
         oled.text("Jogador "+str(numero_i+1), 0, 0)
         oled.text("Cargo:", 0, 10)
         oled.text(str(cargo[numero_i]), 0, 20)
@@ -186,7 +181,7 @@ def atualizaOled(numero_i = 0, tempo = 0):
         else:
             oled.text("Time:Resistencia", 0, 30)
         oled.text("B para esconder", 0, 50)
-    elif estado == 4:
+    elif estado == 4: # mostrando informações de cada missão
         if numero_i == 4 and (mapa[0][0] == WHI or mapa[0][1] == WHI or mapa[0][2] == WHI or mapa[0][3] == WHI):
             oled.text("Missao "+str(numero_i+1), 0, 0)
             oled.text("Jogadores "+str(jogadores_missao[numero_i]), 0, 10)
@@ -199,39 +194,39 @@ def atualizaOled(numero_i = 0, tempo = 0):
             oled.text("Falhas "+str(falhas_missao[numero_i]), 0, 20)        
             oled.text("Selecionar: B", 0, 40)
             
-    elif estado == 5:
+    elif estado == 5: # confirmação de escolha da missão
         oled.text("B para confirmar", 0, 0)
         oled.text("A para voltar", 0, 10)
         oled.text("Missao: "+ str(numero_i+1), 0, 30)
         oled.text("Jogadores "+str(jogadores_missao[numero_i]), 0, 40)
         oled.text("Falhas "+str(falhas_missao[numero_i]), 0, 50)
-    elif estado == 6:
+    elif estado == 6: # votando na missão
         oled.text("Jogador "+str(numero_i+1), 0, 0)
         oled.text("", 0, 10)
         oled.text("A para rejeitar", 0, 20)
         oled.text("B para aprovar", 0, 30)
-    elif estado == 7:
+    elif estado == 7: # confirmação de voto da missão
         oled.text("Jogador "+str(numero_i+1), 0, 0)
         oled.text("Confirma o voto?", 0, 10)
         oled.text("B para confirmar", 0, 20)
         oled.text("A para voltar", 0, 30)
-    elif estado == 8:
+    elif estado == 8: # revelação de resultado da missão
         oled.text("Aperte B para", 0, 0)
         oled.text("revelar o", 0, 10)
         oled.text("resultado", 0, 20)
-    elif estado == 9:
+    elif estado == 9: # fim de jogo
         oled.text("Time vencedor:", 0, 0)
         oled.text(str(time_vencedor), 0, 10)
     oled.show()
 
-
+#função para atualizar o numero de jogadores de acordo com a variavel "pos" de entrada que se refere a posição do joystick
 def atualizaJogadores(pos):
     global numero_de_jogadores
     
     if pos == -1:
-        numero_de_jogadores = numero_de_jogadores - 1 if numero_de_jogadores > 5 else 5
+        numero_de_jogadores = numero_de_jogadores - 1 if numero_de_jogadores > 5 else 5 # numero minimo 5 jogadores
     elif pos == 1:
-        numero_de_jogadores = numero_de_jogadores + 1 if numero_de_jogadores < 10 else 10
+        numero_de_jogadores = numero_de_jogadores + 1 if numero_de_jogadores < 10 else 10 # numero máximo 10 jogadores
 
 
 def confirmarNumDeJogadores():
@@ -239,16 +234,18 @@ def confirmarNumDeJogadores():
     
     atualizaOled()
     
+    #leitura do botão A -> volta pro estado de escolha da quantidade de jogadores
     if button_a.value() == 0 and estado_botao_a == 0:
         estado_botao_a = 1
         estado = 0
     elif button_a.value() == 1 and estado_botao_a == 1:
         estado_botao_a = 0
     
+    #leitura do botão B -> vai pro estado de revelação dos cargos
     if button_b.value() == 0 and estado_botao_b == 0:
         estado_botao_b = 1
         estado = 2
-        if numero_de_jogadores == 7:
+        if numero_de_jogadores == 7:            # configuração da quantidade de jogadores por missão de acordo com o número de jogadores total
             jogadores_missao = [2, 3, 3, 4, 4]
         elif numero_de_jogadores == 6:
             jogadores_missao = [2, 3, 4, 3, 4]
@@ -262,11 +259,11 @@ def escolherNumDeJogadores():
     global estado
     global estado_botao_b
     
-    posicaoJoystick = lerJoystick()
-    atualizaJogadores(posicaoJoystick)
+    posicaoJoystick = lerJoystick()   # retorna -1 se joystick pra esquerda, 1 se joystick pra direita, 0 se joystick no meio
+    atualizaJogadores(posicaoJoystick) # atualiza o número de jogadores
     atualizaOled()
     
-    # Se o Botão B for pressionado
+    # Leitura do botão B -> vai pro estado de confirmação do número de jogadores
     if button_b.value() == 0 and estado_botao_b == 0:
         estado_botao_b = 1
         estado = 1
@@ -281,73 +278,82 @@ def esperarParaRevelarCargo():
     
     sortearCargos()
     
-    flag_sleep = False
+    flag_sleep = True # indica se vai entrar no modo de espera
     
-    while i < numero_de_jogadores:
-        if estado == 2:
-            if flag_sleep and not debug:
-                for k in range(0, 2):
+    while i < numero_de_jogadores: # iteração para cada jogador
+        # verifica se esta no estado de esperar para revelar o cargo (2) ou se esta revelando o cargo (3)
+        if estado == 2: # estado de espera e confirmação para revelar o cargo
+            if flag_sleep and not debug: # verifica o modo de espera
+                for k in range(0, 2): # loop para esperar 2 segundos e exibir no display o tempo
                     atualizaOled(i, 2-k)
                     time.sleep(1)
                 atualizaOled(i, 0)
-                flag_sleep = False
+                flag_sleep = False # indica que a espera finalizou
             else:
-                atualizaOled(i)
+                atualizaOled(i) #atualiza oled após espera finalizada mostrando a tela pré revelação de cargo
             
-            # Se o Botão B for pressionado
+            # Leitura do botão B
             if button_b.value() == 0 and estado_botao_b == 0:
                 estado_botao_b = 1
-                estado = 3
-                #flag_sleep = True
+                estado = 3 # vai para o estado de revelação do cargo
             elif button_b.value() == 1 and estado_botao_b == 1:
                 estado_botao_b = 0
 
-        elif estado == 3:
-            atualizaOled(i)
-            # Se o Botão B for pressionado
+        elif estado == 3: # estado de revelação do cargo
+            atualizaOled(i) # mostra cargo
+            # Leitura do botão B
             if button_b.value() == 0 and estado_botao_b == 0:
                 estado_botao_b = 1
-                estado = 2
-                i += 1
-                flag_sleep = True
+                estado = 2 # volta para o estado de espera e confirmação para revelar o cargo
+                i += 1 # itera a variavel até chegar no ultimo jogador
+                flag_sleep = True # indica para entrar no modo de espera novamente
             elif button_b.value() == 1 and estado_botao_b == 1:
                 estado_botao_b = 0
     
-    estado = 4
+    estado = 4 # após finalizar todos os jogadores vai para o estado de escolha das missões
     atualizaOled()
 
 def sortearCargos():
     global numero_de_jogadores
     global cargo
     
-    cargo = cargo[:numero_de_jogadores]
-
-    last_index = numero_de_jogadores - 1
-
-    while last_index > 0:
-        rand_index = random.randint(0, last_index)
-        cargo[last_index], cargo[rand_index] = cargo[rand_index], cargo[last_index]
-        last_index -= 1
+    """ de acordo com o número de jogadores certos cargos não participam do jogo, usando slicing podemos cortar os a lista de cargos
+        a partir de uma determinada posição em diante, ela foi montada de tal forma que os cargos que só fiquem os cargos que deveriam
+        estar após o slicing. Ex.: com 6 jogadores são retirados: 1 Agente Oculto, 2 da Resistencia e 1 Espiao genérico,
+        ainda no final de "cargo" inicialmente tem uma string vazia, que serve para podermos fazer o slicing mesmo com 10 jogadores """
+    cargo = cargo[:numero_de_jogadores] 
+    
+    # repete o processo de sortear 2 vezes
+    for k in range(0, 2):
+        last_index = numero_de_jogadores - 1
+        # faz N-1 swaps aleatórios na lista de cargos
+        while last_index > 0:
+            rand_index = random.randint(0, last_index)
+            cargo[last_index], cargo[rand_index] = cargo[rand_index], cargo[last_index]
+            last_index -= 1
 
 
 def escolherMissoes():
     global mapa, missao, missao_hover, jogadores_missao, falhas_missao, missao_escolhida, estado_botao_b, estado
     
-    
+    # le a posiçao do joystick e muda a "seta" que é usada para escolher qual missão será selecionada
     pos = lerJoystick()
     if pos == -1:
-        missao_hover = missao_hover - 1 if missao_hover > 0 else 0
+        missao_hover = missao_hover - 1 if missao_hover > 0 else 0 # não pode ser menor que 0
     elif pos == 1:
-        missao_hover = missao_hover + 1 if missao_hover < 4 else 4
+        missao_hover = missao_hover + 1 if missao_hover < 4 else 4 # não pode ser maior que 4 (há 5 missões)
     
+    #atualiza o mapa para mudar a posição da "seta" (missão_hover)
     mapa[1] = [BLA, BLA, BLA, BLA, BLA]
     mapa[3] = [BLA, BLA, BLA, BLA, BLA]
     mapa[4] = [BLA, BLA, BLA, BLA, BLA]
     
     mapa[1][missao_hover] = YEL
     
+    # indica quantos jogadores vão na missão
     for i in range (0, jogadores_missao[missao_hover]):
         mapa[3][i] = GRE
+    # indica quantos falhas a missão precisa para falhar
     for i in range (0, falhas_missao[missao_hover]):
         mapa[4][i] = RED
     
@@ -358,7 +364,7 @@ def escolherMissoes():
     if button_b.value() == 0 and estado_botao_b == 0:
         estado_botao_b = 1
         if missao[missao_hover] == 0:
-            estado = 5
+            estado = 5 # vai para o estado de confirmação da missão escolhida
             missao_escolhida = missao_hover
     elif button_b.value() == 1 and estado_botao_b == 1:
         estado_botao_b = 0
@@ -369,63 +375,67 @@ def confirmarMissao():
     
     atualizaOled(missao_escolhida)
     
+    # Leitura do botão A
     if button_a.value() == 0 and estado_botao_a == 0:
         estado_botao_a = 1
-        estado = 4
+        estado = 4 # volta para o estado de escolher missão
     elif button_a.value() == 1 and estado_botao_a == 1:
         estado_botao_a = 0
     
+    # Leitura do botão B
     if button_b.value() == 0 and estado_botao_b == 0:
         estado_botao_b = 1
-        estado = 6
-    
+        estado = 6 # vai para o estado de votação
     elif button_b.value() == 1 and estado_botao_b == 1:
         estado_botao_b = 0
 
 
 def escolherVoto():
-    global vote_arrow, estado, estado_botao_a, estado_botao_b, missao_escolhida, votos_nao, num, voto_atual, missao_hover
+    global vote_arrow, estado, estado_botao_a, estado_botao_b, missao_escolhida, votos_nao, jogador_atual, voto_atual, missao_hover
     
     mostrarMatriz(vote_arrow)
     
-    if num < jogadores_missao[missao_escolhida]:
-        atualizaOled(num)
+    # "itera" entre a quantidade de jogadores da missão
+    if jogador_atual < jogadores_missao[missao_escolhida]:
+        atualizaOled(jogador_atual)
+        
+        # Leitura do botão A
         if button_a.value() == 0 and estado_botao_a == 0:
             estado_botao_a = 1
-            estado = 7
-            voto_atual = False
-        
+            estado = 7 #  vai para o estado de confirmação do voto
+            voto_atual = False # configura voto como "Não"
         elif button_a.value() == 1 and estado_botao_a == 1:
             estado_botao_a = 0
         
+        # Leitura do botão B
         if button_b.value() == 0 and estado_botao_b == 0:
             estado_botao_b = 1
-            estado = 7
-            voto_atual = True
-            
+            estado = 7 #  vai para o estado de confirmação do voto
+            voto_atual = True  # configura voto como "Sim"
         elif button_b.value() == 1 and estado_botao_b == 1:
             estado_botao_b = 0
     else:
-        estado = 8
-        num = 0
+        estado = 8 # quando acaba os jogadores muda para o estado de revelação da missão
+        jogador_atual = 0 # zera a variável de "iteração"
 
 def confirmarVoto():
-    global estado, estado_botao_a, estado_botao_b, num, voto_atual, votos_nao
+    global estado, estado_botao_a, estado_botao_b, jogador_atual, voto_atual, votos_nao
     
-    atualizaOled(num)
+    atualizaOled(jogador_atual)
     
+    # Leitura do botão A
     if button_a.value() == 0 and estado_botao_a == 0:
         estado_botao_a = 1
-        estado = 6
+        estado = 6 # volta para o estado de escolher voto
     elif button_a.value() == 1 and estado_botao_a == 1:
         estado_botao_a = 0
     
     if button_b.value() == 0 and estado_botao_b == 0:
         estado_botao_b = 1
-        estado = 6
-        num += 1
+        estado = 6 # volta para o estado de escolher voto
+        jogador_atual += 1 # incrementa o numero de jogadores que ja votaram
         if voto_atual == False:
-            votos_nao[missao_escolhida] += 1
+            votos_nao[missao_escolhida] += 1 #  conta votos negados para a missão atual
             
     elif button_b.value() == 1 and estado_botao_b == 1:
         estado_botao_b = 0
@@ -436,11 +446,13 @@ def mostrarVotos():
     
     atualizaOled()
     
+    # Leitura do botão B
     if button_b.value() == 0 and estado_botao_b == 0:
         estado_botao_b = 1    
         
         animacaoMostraVotos()
         
+        # Verifica se a missão deu falha ou sucesso
         if votos_nao[missao_escolhida] >= falhas_missao[missao_escolhida]:
             missao[missao_escolhida] = -1
             mapa[0][missao_escolhida] = RED
@@ -460,10 +472,10 @@ def mostrarVotos():
             else:
                 animacaoVotoSim()
         atualizaOled()
-        if estado != 9:
-            estado = 4
-        if missao.count(0) == 0:
-            missao[4] = 0
+        if estado != 9: # verifica se o jogo não acabou
+            estado = 4 #  volta para o estado de escolher missões
+            if missao.count(0) == 0: # verifica se não as 4 primeiras missões ja foram jogadas
+                missao[4] = 0 # libera a última missão
     
     elif button_b.value() == 1 and estado_botao_b == 1:
         estado_botao_b = 0
@@ -480,6 +492,8 @@ def animacaoMostraVotos():
                  [BLA, BLA, BLA, BLA, BLA]
                  ]
     i = 0
+    
+    # mostra os votos de maneira a não revelar a ordem em que eles ocorreram, mostrando primeiro os azuis
     for i in range(0, jogadores_missao[missao_escolhida]):
         if i < votos_sim:
             cor = BLU
@@ -603,8 +617,9 @@ def som_vitoria():
 
 
 def reiniciarJogo():
-    global estado, missao_hover, cargo, jogadores_missao, falhas_missao, missao, missao_escolhida, votos_nao, num, voto_atual, time_vencedor, heart, mapa
+    global estado, missao_hover, cargo, jogadores_missao, falhas_missao, missao, missao_escolhida, votos_nao, jogador_atual, voto_atual, time_vencedor, heart, mapa
     
+    # reinicia todas as variaveis necessárias
     mostrarMatriz(heart)
     estado = 0
     missao_hover = 0
@@ -614,7 +629,7 @@ def reiniciarJogo():
     missao = [0, 0, 0, 0, None]
     missao_escolhida = None
     votos_nao = [0, 0, 0, 0, 0]
-    num = 0
+    jogador_atual = 0
     voto_atual = None
     time_vencedor = None
     mapa = [
@@ -628,6 +643,7 @@ def reiniciarJogo():
 
 
 def main():
+    #loop infinito verificando a maquina de estados
     while True:
         if estado == 0:
             escolherNumDeJogadores()
