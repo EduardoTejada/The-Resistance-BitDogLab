@@ -6,7 +6,7 @@ import utime, time, random, neopixel
 debug = False
 
 # Intensidade do LED, pode variar de 1 a 255
-it=20
+it=40
 
 # Configuração dos botões
 button_a = Pin(5, Pin.IN, Pin.PULL_UP)
