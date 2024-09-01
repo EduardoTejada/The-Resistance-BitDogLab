@@ -3,9 +3,10 @@ from ssd1306 import SSD1306_I2C
 import utime, time, random, neopixel
 
 # Debug, quando True retira os atrasos de animações do código para debug mais rápido
-debug = True
+debug = False
 
-it=40 # Intensidade do LED, pode variar de 1 a 255
+# Intensidade do LED, pode variar de 1 a 255
+it=20
 
 # Configuração dos botões
 button_a = Pin(5, Pin.IN, Pin.PULL_UP)
@@ -33,7 +34,7 @@ RED = (1*it, 0, 0)#RED
 YEL = (1*it, 1*it, 0)# YELLOW
 MAGE = (1*it, 0, 1*it)# MANGENTA
 CYA = (0, 1*it, 1*it)# CYAN
-WHI = (1*it, 1*it, 1*it)# WHIE
+WHI = (1*it//3, 1*it//3, 1*it//3)# WHIE
 BLA = (0, 0, 0)# BLACK
 
 # Simbolos padrões no display matricial
@@ -317,10 +318,10 @@ def sortearCargos():
     global numero_de_jogadores
     global cargo
     
-    """ de acordo com o número de jogadores certos cargos não participam do jogo, usando slicing podemos cortar os a lista de cargos
-        a partir de uma determinada posição em diante, ela foi montada de tal forma que os cargos que só fiquem os cargos que deveriam
+    """ de acordo com o número de jogadores certos cargos não participam do jogo, usando slicing podemos cortar a lista de cargos
+        a partir de uma determinada posição em diante, ela foi montada de tal forma que só fiquem os cargos que deveriam
         estar após o slicing. Ex.: com 6 jogadores são retirados: 1 Agente Oculto, 2 da Resistencia e 1 Espiao genérico,
-        ainda no final de "cargo" inicialmente tem uma string vazia, que serve para podermos fazer o slicing mesmo com 10 jogadores """
+        ainda, no final de "cargo" inicialmente tem uma string vazia "", que serve para podermos fazer o slicing mesmo com 10 jogadores """
     cargo = cargo[:numero_de_jogadores] 
     
     # repete o processo de sortear 2 vezes
