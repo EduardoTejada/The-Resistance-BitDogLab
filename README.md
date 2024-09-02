@@ -1,4 +1,5 @@
-Implementação do jogo [The Resistance](https://www.fclar.unesp.br/Home/Biblioteca/jogos-the-resistance-manual.pdf) na [BitDogLab](https://github.com/BitDogLab/BitDogLab) como projeto da matéria de Laboratório de Sistemas Embarcados EA076. 
+Implementação do jogo [The Resistance](https://www.fclar.unesp.br/Home/Biblioteca/jogos-the-resistance-manual.pdf) na [BitDogLab](https://github.com/BitDogLab/BitDogLab) como projeto da matéria de Laboratório de Sistemas Embarcados EA076.
+[Apresentação](https://theresistance.my.canva.site/)
 
 **Objetivo:**
 - The Resistance é um jogo social de dedução com identidades secretas. Os Jogadores podem ter o papel de agentes da Resistência tentando derrubar um governo maligno, ou serem espiões tentando sabotar a Resistência. A Resistência vence o jogo se três missões forem completadas com sucesso, os Espiões vencem se três missões fracassarem. Os Espiões também podem vencer se a Resistência for incapaz de organizar uma Equipe de Missão em qualquer momento do jogo (5 votações com rejeição em uma única missão).
